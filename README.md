@@ -4,6 +4,10 @@
 
 ![ON-AIR 控制台](docs/screenshot.png)
 
+钉钉收到的预警长这样：
+
+![钉钉预警](docs/dingtalk-alert.png)
+
 ## 原理
 
 - **认证与数据**：[login-zju](https://www.npmjs.com/package/login-zju)（统一身份认证）+ 智云课堂接口（课程 / 场次 / 直播探测）
