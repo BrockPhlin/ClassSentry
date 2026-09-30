@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClassSentry · 课堂哨兵</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">CLASS·SENTRY<em>哨兵</em></span>
+      <span class="brand-sub">智云课堂关键词预警</span>
+    </div>
+    <div class="strip">
+      <button class="chip" id="chip-zhiyun" title="测试智云登录">
+        <i class="led"></i><span>智云</span><b>未测试</b>
+      </button>
+      <button class="chip" id="chip-ding" title="测试钉钉机器人">
+        <i class="led"></i><span>钉钉</span><b>未测试</b>
+      </button>
+      <span class="badge" id="phase-badge">连接中</span>
+      <span class="stats" id="stats"></span>
+      <button class="gear" id="btn-open-settings" title="连接与配置">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        设置
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="card" id="control">
+      <h2><i>01</i>监控控制</h2>
+      <div class="grid-row">
+        <select id="course-select" disabled><option value="">先加载课程</option></select>
+        <button id="btn-load-courses">加载课程</button>
+      </div>
+      <div class="grid-row">
+        <input id="manual-course-id" type="text" placeholder="或手动输入课程 ID" />
+        <button id="btn-manual-course">使用该 ID</button>
+      </div>
+      <div class="grid-row">
+        <select id="session-select" disabled><option value="">先选课程</option></select>
+        <button id="btn-probe" disabled>探测</button>
+      </div>
+      <div id="probe-result" class="probe hidden"></div>
+      <div class="grid-row modes">
+        <label><input type="radio" name="mode" value="monitor" checked /><span>监控直播</span></label>
+        <label><input type="radio" name="mode" value="replay" /><span>重放已结束场次</span></label>
+        <label id="push-ding-wrap" class="hidden"><input type="checkbox" id="push-ding" /><span>确认推送钉钉</span></label>
+      </div>
+      <div class="grid-row actions">
+        <button id="btn-start" class="primary" disabled>▸ 启动</button>
+        <button id="btn-stop" disabled>■ 停止</button>
+        <button id="btn-reset" disabled>✕ 清除</button>
+      </div>
+      <div id="control-error" class="error-msg hidden"></div>
+    </section>
+
+    <section class="card" id="keywords-card">
+      <h2><i>02</i>预警关键词</h2>
+      <div class="grid-row">
+        <input id="kw-input" type="text" placeholder="签到,扫码,二维码,小测,测验,点名" />
+      </div>
+      <div class="grid-row">
+        <label class="inline">同词冷却 <input id="kw-cooldown" type="number" min="1" /> 秒</label>
+        <button id="btn-apply-kw" class="primary">应用</button>
+      </div>
+      <p class="note">逗号分隔；保存后对下一次监控任务生效</p>
+    </section>
+
+    <section class="card wide" id="transcript-section">
+      <h2><i>03</i>实时字幕</h2>
+      <div class="terminal-wrap">
+        <div id="transcript" class="terminal"><div class="placeholder">等待转写…</div></div>
+        <div class="lock" id="transcript-lock">
+          <div class="lock-ring">OFF&nbsp;AIR</div>
+          <p>连通性未验证 —— 完成智云与钉钉的测试后，这里才会开始滚动实时字幕</p>
+          <button id="btn-lock-settings">去测试连通性</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card wide" id="alerts-section">
+      <h2><i>04</i>告警历史</h2>
+      <table id="alerts-table">
+        <thead>
+          <tr><th>时间</th><th>命中</th><th>老师原话</th><th>钉钉</th></tr>
+        </thead>
+        <tbody id="alerts-body"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <dialog id="settings-modal">
+    <div class="modal-head">
+      <h3>连接与配置</h3>
+      <button class="ghost" id="btn-close-settings">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <section class="conn">
+        <div class="conn-title">
+          <i class="led" id="led-zhiyun"></i>
+          <b>智云课堂认证</b>
+          <span class="conn-status" id="zhiyun-status">未测试</span>
+        </div>
+        <label>学号<input id="set-username" type="text" autocomplete="off" /></label>
+        <label>密码<input id="set-password" type="password" placeholder="" autocomplete="new-password" /></label>
+        <button class="test-btn" id="btn-save-test-zhiyun">保存并测试登录</button>
+      </section>
+
+      <section class="conn">
+        <div class="conn-title">
+          <i class="led" id="led-ding"></i>
+          <b>钉钉机器人</b>
+          <span class="conn-status" id="ding-status">未测试</span>
+        </div>
+        <label class="check"><input id="set-ding-enabled" type="checkbox" /><span>启用钉钉推送</span></label>
+        <label>Webhook<input id="set-ding-webhook" type="text" autocomplete="off" /></label>
+        <label>加签密钥<input id="set-ding-secret" type="password" placeholder="" autocomplete="new-password" /></label>
+        <button class="test-btn" id="btn-save-test-ding">保存并发送测试消息</button>
+        <p class="note">机器人无需登录：钉钉群「设置 → 智能群助手 → 添加机器人 → 自定义」创建。
+        若用「自定义关键词」安全设置，消息标题里必须包含那个关键词。</p>
+      </section>
+
+      <details class="advanced">
+        <summary>高级选项</summary>
+        <label>消息标题<input id="set-alert-title" type="text" /></label>
+        <label>监听模式
+          <select id="set-listen-mode">
+            <option value="auto">auto（推荐）</option>
+            <option value="ws">ws（强制 WebSocket）</option>
+            <option value="poll">poll（强制轮询）</option>
+          </select>
+        </label>
+        <label>轮询间隔（秒）<input id="set-poll-interval" type="number" min="3" /></label>
+        <label class="check"><input id="set-final-only" type="checkbox" /><span>仅句子定稿后告警（稳但慢）</span></label>
+        <label class="check"><input id="set-debug-raw" type="checkbox" /><span>DEBUG_RAW（打印未解析 WS 帧）</span></label>
+        <button class="test-btn" id="btn-save-advanced">保存高级选项</button>
+      </details>
+    </div>
+  </dialog>
+
+  <div id="toasts"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

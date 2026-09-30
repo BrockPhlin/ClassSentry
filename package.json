@@ -1,0 +1,22 @@
+{
+  "name": "class-sentry",
+  "version": "0.2.0",
+  "description": "课堂哨兵：智云课堂直播语音关键词钉钉预警 + ON-AIR 网页控制台",
+  "type": "module",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^5.2.1",
+    "inquirer": "^12.11.1",
+    "login-zju": "^1.0.9",
+    "ws": "^8.18.0"
+  }
+}
