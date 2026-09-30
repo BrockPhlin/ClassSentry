@@ -179,7 +179,17 @@ function maskSecret(v) {
 
 function maskWebhook(v) {
   if (!v) return "";
-  return v.replace(/(access_token=)([^&]{6})[^&]*([^&]{4})/, "$1$2****$3");
+  try {
+    const url = new URL(v);
+    // 不返回任何查询参数或 URL 中的凭据，包括短 token。
+    url.username = "";
+    url.password = "";
+    for (const key of [...url.searchParams.keys()]) url.searchParams.set(key, "****");
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return "****";
+  }
 }
 
 // GET /api/settings 的安全视图：密码/secret 永不回显

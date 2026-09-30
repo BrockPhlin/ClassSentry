@@ -35,16 +35,22 @@
   </header>
 
   <main>
+    <section class="overview" aria-label="监控概览">
+      <div><span class="eyebrow">LIVE CLASSROOM / 课堂监听台</span><h1>让关键提醒，<br />及时抵达。</h1><p id="task-description">选择课程与场次，开启你的课堂哨兵。</p></div>
+      <div class="overview-stats"><div><span>接收转写</span><strong id="fragment-count">0</strong></div><div><span>触发预警</span><strong id="alert-count">0</strong></div><div><span>实时连接</span><strong class="connection-value" id="connection-status" role="status">连接中</strong></div></div>
+    </section>
     <section class="card" id="control">
       <h2><i>01</i>监控控制</h2>
+      <label class="field-label" for="course-select">课程</label>
       <div class="grid-row">
         <select id="course-select" disabled><option value="">先加载课程</option></select>
         <button id="btn-load-courses">加载课程</button>
       </div>
-      <div class="grid-row">
-        <input id="manual-course-id" type="text" placeholder="或手动输入课程 ID" />
+      <details class="manual-entry"><summary>使用课程 ID 手动添加</summary><div class="grid-row">
+        <input aria-label="课程 ID" id="manual-course-id" type="text" placeholder="或手动输入课程 ID" />
         <button id="btn-manual-course">使用该 ID</button>
-      </div>
+      </div></details>
+      <label class="field-label" for="session-select">课堂场次</label>
       <div class="grid-row">
         <select id="session-select" disabled><option value="">先选课程</option></select>
         <button id="btn-probe" disabled>探测</button>
@@ -60,28 +66,28 @@
         <button id="btn-stop" disabled>■ 停止</button>
         <button id="btn-reset" disabled>✕ 清除</button>
       </div>
-      <div id="control-error" class="error-msg hidden"></div>
+      <div id="control-error" class="error-msg hidden" role="alert"></div>
     </section>
 
     <section class="card" id="keywords-card">
       <h2><i>02</i>预警关键词</h2>
       <div class="grid-row">
-        <input id="kw-input" type="text" placeholder="签到,扫码,二维码,小测,测验,点名" />
+        <input aria-label="预警关键词，逗号分隔" id="kw-input" type="text" placeholder="签到,扫码,二维码,小测,测验,点名" />
       </div>
       <div class="grid-row">
         <label class="inline">同词冷却 <input id="kw-cooldown" type="number" min="1" /> 秒</label>
         <button id="btn-apply-kw" class="primary">应用</button>
       </div>
-      <p class="note">逗号分隔；保存后对下一次监控任务生效</p>
+      <div id="keyword-preview" class="keyword-preview" aria-label="当前保存的关键词"></div><p class="note">中英文逗号均可分隔 · 保存后对下一次任务生效</p>
     </section>
 
     <section class="card wide" id="transcript-section">
-      <h2><i>03</i>实时字幕</h2>
+      <div class="section-head"><h2><i>03</i>实时字幕</h2><button id="btn-autoscroll" class="small-button" aria-pressed="true">自动滚动 · 开</button></div>
       <div class="terminal-wrap">
-        <div id="transcript" class="terminal"><div class="placeholder">等待转写…</div></div>
+        <div id="transcript" class="terminal"><div class="placeholder"><span class="empty-symbol">〰</span><b>等待课堂的第一句话</b><span>启动监控后，实时字幕将在这里呈现。</span></div></div>
         <div class="lock" id="transcript-lock">
           <div class="lock-ring">OFF&nbsp;AIR</div>
-          <p>连通性未验证 —— 完成智云与钉钉的测试后，这里才会开始滚动实时字幕</p>
+          <p>先完成智云登录测试；启用钉钉后，还需验证推送连接。</p>
           <button id="btn-lock-settings">去测试连通性</button>
         </div>
       </div>
@@ -89,19 +95,19 @@
 
     <section class="card wide" id="alerts-section">
       <h2><i>04</i>告警历史</h2>
-      <table id="alerts-table">
+      <div class="table-wrap"><table id="alerts-table">
         <thead>
           <tr><th>时间</th><th>命中</th><th>老师原话</th><th>钉钉</th></tr>
         </thead>
         <tbody id="alerts-body"></tbody>
-      </table>
+      </table></div>
     </section>
   </main>
 
-  <dialog id="settings-modal">
+  <dialog id="settings-modal" aria-labelledby="settings-title">
     <div class="modal-head">
-      <h3>连接与配置</h3>
-      <button class="ghost" id="btn-close-settings">✕</button>
+      <h3 id="settings-title">连接与配置</h3>
+      <button class="ghost" id="btn-close-settings" aria-label="关闭设置">✕</button>
     </div>
 
     <div class="modal-body">
@@ -148,7 +154,7 @@
     </div>
   </dialog>
 
-  <div id="toasts"></div>
+  <div id="toasts" role="status" aria-live="polite"></div>
   <script type="module" src="/app.js"></script>
 </body>
 </html>

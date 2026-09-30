@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import path from "node:path";
 
 import { CLASSROOM, ZJUAM } from "login-zju";
 
@@ -23,7 +22,7 @@ function isSessionInvalidError(err) {
 
 // 服务器进程内监控任务状态机：同一时间至多一个任务。
 // phase: idle -> starting -> running -> (ended | stopped | error)；ended/stopped/error 可重新 start。
-export function createMonitor({ getConfig, historyPath }) {
+export function createMonitor({ getConfig, historyPath, apiFactory = createApi }) {
   let phase = "idle";
   let mode = null; // "monitor" | "replay"
   let course = null;
@@ -31,13 +30,14 @@ export function createMonitor({ getConfig, historyPath }) {
   let probe = null;
   let listenerCtl = null;
   let pipeline = null;
+  let taskConfig = null;
   let startedAt = null;
   let endedAt = null;
   let lastError = null;
   let epoch = 0;
 
   // login-zju 会话无法软重置（内部登录标志私有且不可逆），重登 = 整体重建
-  let sessionRef = { classroom: null, api: null };
+  const sessionRef = { classroom: null, api: null, current: null };
   let sessionDirty = true;
   let reloginAt = 0;
   let reloginPromise = null;
@@ -83,7 +83,9 @@ export function createMonitor({ getConfig, historyPath }) {
     if (!force && !sessionDirty && sessionRef.api) return sessionRef;
     const cfg = getConfig();
     const classroom = new CLASSROOM(new ZJUAM(cfg.username, cfg.password));
-    sessionRef = { classroom, api: createApi(classroom, cfg) };
+    sessionRef.classroom = classroom;
+    sessionRef.api = apiFactory(classroom, cfg);
+    sessionRef.current = sessionRef.api;
     sessionDirty = false;
     return sessionRef;
   }
@@ -132,6 +134,8 @@ export function createMonitor({ getConfig, historyPath }) {
         });
       },
       endInterim() {
+        const last = transcriptBuf.at(-1);
+        if (last && !last.final) last.flushed = true;
         broadcast("transcript_flush", {});
       },
       alert() {
@@ -172,7 +176,7 @@ export function createMonitor({ getConfig, historyPath }) {
         pollIntervalSeconds: cfg.pollIntervalMs / 1000,
         alertOnFinalOnly: cfg.alertOnFinalOnly,
         alertTitle: cfg.alertTitle,
-        keywords: cfg.keywords,
+        keywords: taskConfig?.keywords ?? cfg.keywords,
       },
     };
   }
@@ -260,6 +264,9 @@ export function createMonitor({ getConfig, historyPath }) {
         );
       }
 
+      taskConfig = cfg;
+      pipeline = null;
+      probe = null;
       phase = "starting";
       mode = taskMode;
       course = { id: c.id, title: c.title, teacher: c.teacher || "" };
@@ -280,6 +287,7 @@ export function createMonitor({ getConfig, historyPath }) {
       const myEpoch = ++epoch;
       try {
         await ensureSession({ force: sessionDirty });
+        if (myEpoch !== epoch) return getState();
 
         // 探测失败沿用 CLI 语义：warn 后按无通道继续（走轮询）
         let pr = { live: false, hasAsr: false, asrRunning: false, transSocketUrl: "" };
@@ -288,6 +296,7 @@ export function createMonitor({ getConfig, historyPath }) {
         } catch (e) {
           log(`探测直播状态失败：${e.message}`, "warn");
         }
+        if (myEpoch !== epoch) return getState();
         probe = pr;
 
         const courseLabel = course.teacher
@@ -299,6 +308,7 @@ export function createMonitor({ getConfig, historyPath }) {
             courseLabel,
             sessionTitle: session.title,
             onAlert: ({ fragment, hits, sent, reason, at }) => {
+              if (myEpoch !== epoch) return;
               const entry = {
                 id: `${at}-${hits.join("/")}`,
                 at,
@@ -320,9 +330,10 @@ export function createMonitor({ getConfig, historyPath }) {
           makeSink()
         );
         pipeline = {
-          ingest(fragment, opts) {
-            if (myEpoch !== epoch) return Promise.resolve(); // stop 后丢弃 in-flight
-            return basePipeline.ingest(fragment, opts);
+          async ingest(fragment, opts) {
+            if (myEpoch !== epoch) return; // stop 后丢弃 in-flight
+            await basePipeline.ingest(fragment, opts);
+            if (myEpoch === epoch) broadcastState();
           },
           newlineIfInterim: () => basePipeline.newlineIfInterim(),
           stats: basePipeline.stats,
@@ -330,6 +341,8 @@ export function createMonitor({ getConfig, historyPath }) {
 
         const handleEnded = (label) => () => {
           if (myEpoch !== epoch) return;
+          listenerCtl?.stop();
+          pipeline?.newlineIfInterim();
           phase = "ended";
           endedAt = Date.now();
           log(label, "info");
@@ -381,8 +394,11 @@ export function createMonitor({ getConfig, historyPath }) {
         broadcastState();
         return getState();
       } catch (e) {
+        if (myEpoch !== epoch) return getState();
+        listenerCtl?.stop();
+        listenerCtl = null;
         epoch++;
-        phase = "idle";
+        phase = "error";
         lastError = String(e.message || e);
         broadcastState();
         throw e;
@@ -391,6 +407,7 @@ export function createMonitor({ getConfig, historyPath }) {
 
     stop() {
       listenerCtl?.stop();
+      pipeline?.newlineIfInterim();
       listenerCtl = null;
       if (phase === "starting" || phase === "running") {
         epoch++;
@@ -406,6 +423,7 @@ export function createMonitor({ getConfig, historyPath }) {
       if (phase === "starting" || phase === "running") {
         throw httpError(409, "already_running", "任务运行中，请先停止");
       }
+      epoch++; // 清除后丢弃上一场尚未完成的处理回调
       transcriptBuf.length = 0;
       phase = "idle";
       mode = null;
@@ -414,6 +432,7 @@ export function createMonitor({ getConfig, historyPath }) {
       probe = null;
       listenerCtl = null;
       pipeline = null;
+      taskConfig = null;
       startedAt = null;
       endedAt = null;
       lastError = null;

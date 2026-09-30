@@ -2,7 +2,7 @@ export const DEFAULT_KEYWORDS = ["签到", "扫码", "二维码", "小测", "测
 
 export function compileKeywords(raw, defaults = DEFAULT_KEYWORDS) {
   const list = String(raw || "")
-    .split(",")
+    .split(/[,，]/)
     .map((k) => k.trim().toLowerCase())
     .filter(Boolean);
   const source = list.length ? list : defaults;

@@ -11,6 +11,7 @@ export class PollListener extends EventEmitter {
     this.alertOnBaseline = alertOnBaseline;
     this.seen = new Set();
     this.stopped = false;
+    this.polling = false;
     this.timer = null;
     this.consecutiveFailures = 0;
     this.failureLimit = 5;
@@ -27,12 +28,14 @@ export class PollListener extends EventEmitter {
   }
 
   async poll(baseline) {
-    if (this.stopped) return;
+    if (this.stopped || this.polling) return;
+    this.polling = true;
     let result;
     try {
       result = await this.fetchItems();
       this.consecutiveFailures = 0;
     } catch (e) {
+      if (this.stopped) return;
       this.consecutiveFailures += 1;
       if (this.consecutiveFailures >= this.failureLimit) {
         this.emit(
@@ -46,7 +49,10 @@ export class PollListener extends EventEmitter {
         );
       }
       return;
+    } finally {
+      this.polling = false;
     }
+    if (this.stopped) return;
 
     const fresh = result.items.filter((frag) => !this.seen.has(frag.key));
     for (const frag of fresh) this.seen.add(frag.key);
@@ -60,6 +66,7 @@ export class PollListener extends EventEmitter {
     // finished=接口已切换到课后 BeginSec 形态，说明本场转写已到头
     if (result.finished && !this.endedEmitted) {
       this.endedEmitted = true;
+      this.stop();
       this.emit("ended");
     }
   }
