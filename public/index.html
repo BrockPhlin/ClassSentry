@@ -3,41 +3,50 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ClassSentry · 课堂哨兵</title>
+  <title>直播台 · ClassSentry 课堂哨兵</title>
+  <meta name="theme-color" content="#faf9f5" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23faf9f5'/%3E%3Ccircle cx='32' cy='32' r='19' fill='none' stroke='%23e7e3d8' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='11' fill='%23d97757'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Serif+SC:wght@600;700&display=swap"
     rel="stylesheet"
   />
   <link rel="stylesheet" href="/style.css" />
 </head>
-<body>
-  <header class="topbar">
+<body data-page="live">
+  <aside class="sidebar">
     <div class="brand">
-      <span class="brand-mark">CLASS·SENTRY<em>哨兵</em></span>
+      <a class="brand-mark" href="/">CLASS·SENTRY<em>哨兵</em></a>
       <span class="brand-sub">智云课堂关键词预警</span>
     </div>
-    <div class="strip">
-      <button class="chip" id="chip-zhiyun" title="测试智云登录">
-        <i class="led"></i><span>智云</span><b>未测试</b>
-      </button>
-      <button class="chip" id="chip-ding" title="测试钉钉机器人">
-        <i class="led"></i><span>钉钉</span><b>未测试</b>
-      </button>
-      <span class="badge" id="phase-badge">连接中</span>
-      <span class="stats" id="stats"></span>
-      <button class="gear" id="btn-open-settings" title="连接与配置">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        设置
-      </button>
+    <nav class="nav" aria-label="页面导航">
+      <a href="/" data-nav="live"><i class="nav-ico" aria-hidden="true">◉</i><span class="nav-txt"><b>直播台</b><small>字幕 · 关键词预警</small></span></a>
+      <a href="/checkin" data-nav="checkin"><i class="nav-ico" aria-hidden="true">✓</i><span class="nav-txt"><b>自动签到</b><small>点名自动应答</small></span></a>
+      <a href="/deck" data-nav="deck"><i class="nav-ico" aria-hidden="true">▤</i><span class="nav-txt"><b>课件库</b><small>板书导出 PPT</small></span></a>
+      <a href="/settings" data-nav="settings"><i class="nav-ico" aria-hidden="true">⚙</i><span class="nav-txt"><b>设置</b><small>连通与关键词</small></span></a>
+    </nav>
+    <div class="sidebar-foot">
+      <a class="chip" href="/settings" id="chip-zhiyun" title="智云登录状态，点击去设置">
+        <i class="led" id="led-zhiyun"></i><span>智云</span><b>未测试</b>
+      </a>
+      <a class="chip" href="/settings" id="chip-ding" title="钉钉机器人状态，点击去设置">
+        <i class="led" id="led-ding"></i><span>钉钉</span><b>未测试</b>
+      </a>
+      <span class="conn-dot" id="connection-status" role="status">连接中</span>
     </div>
-  </header>
-
+  </aside>
+  <div class="content">
   <main>
     <section class="overview" aria-label="监控概览">
-      <div><span class="eyebrow">LIVE CLASSROOM / 课堂监听台</span><h1>让关键提醒，<br />及时抵达。</h1><p id="task-description">选择课程与场次，开启你的课堂哨兵。</p></div>
-      <div class="overview-stats"><div><span>接收转写</span><strong id="fragment-count">0</strong></div><div><span>触发预警</span><strong id="alert-count">0</strong></div><div><span>实时连接</span><strong class="connection-value" id="connection-status" role="status">连接中</strong></div></div>
+      <div>
+        <span class="eyebrow">LIVE CLASSROOM / 课堂监听台</span>
+        <span class="badge" id="phase-badge">连接中</span>
+        <h1>让关键提醒，<br />及时抵达。</h1>
+        <p id="task-description">选择课程与场次，开启你的课堂哨兵。</p>
+        <p class="task-meta hidden" id="task-meta"></p>
+      </div>
+      <div class="overview-stats"><div><span>接收转写</span><strong id="fragment-count">0</strong></div><div><span>触发预警</span><strong id="alert-count">0</strong></div><div><span>实时连接</span><strong class="connection-value" id="overview-conn" role="status">连接中</strong></div></div>
     </section>
     <section class="card" id="control">
       <h2><i>01</i>监控控制</h2>
@@ -67,34 +76,35 @@
         <button id="btn-reset" disabled>✕ 清除</button>
       </div>
       <div id="control-error" class="error-msg hidden" role="alert"></div>
+      <div class="kw-line">
+        <span class="field-label">当前告警词</span>
+        <div id="live-keywords" class="keyword-preview" aria-label="当前生效的告警关键词"></div>
+        <a class="small-link" href="/settings">去设置修改 →</a>
+      </div>
     </section>
 
-    <section class="card" id="keywords-card">
-      <h2><i>02</i>预警关键词</h2>
-      <div class="grid-row">
-        <input aria-label="预警关键词，逗号分隔" id="kw-input" type="text" placeholder="签到,扫码,二维码,小测,测验,点名" />
-      </div>
-      <div class="grid-row">
-        <label class="inline">同词冷却 <input id="kw-cooldown" type="number" min="1" /> 秒</label>
-        <button id="btn-apply-kw" class="primary">应用</button>
-      </div>
-      <div id="keyword-preview" class="keyword-preview" aria-label="当前保存的关键词"></div><p class="note">中英文逗号均可分隔 · 保存后对下一次任务生效</p>
-    </section>
-
-    <section class="card wide" id="transcript-section">
-      <div class="section-head"><h2><i>03</i>实时字幕</h2><button id="btn-autoscroll" class="small-button" aria-pressed="true">自动滚动 · 开</button></div>
+    <section class="card" id="transcript-section">
+      <div class="section-head"><h2><i>02</i>实时字幕</h2><span class="head-tools"><button id="btn-copy-transcript" class="small-button" title="复制当前全部字幕文本">复制全文</button><button id="btn-export-transcript" class="small-button" title="下载字幕为 TXT 文件">导出 TXT</button><button id="btn-autoscroll" class="small-button" aria-pressed="true">自动滚动 · 开</button></span></div>
       <div class="terminal-wrap">
         <div id="transcript" class="terminal"><div class="placeholder"><span class="empty-symbol">〰</span><b>等待课堂的第一句话</b><span>启动监控后，实时字幕将在这里呈现。</span></div></div>
         <div class="lock" id="transcript-lock">
-          <div class="lock-ring">OFF&nbsp;AIR</div>
+          <div class="lock-ring">STANDBY</div>
           <p>先完成智云登录测试；启用钉钉后，还需验证推送连接。</p>
-          <button id="btn-lock-settings">去测试连通性</button>
+          <a class="lock-cta" href="/settings" id="btn-lock-settings">去测试连通性</a>
         </div>
       </div>
     </section>
 
     <section class="card wide" id="alerts-section">
-      <h2><i>04</i>告警历史</h2>
+      <div class="section-head">
+        <h2><i>03</i>告警历史</h2>
+        <span class="head-tools">
+          <input id="alert-search" type="text" placeholder="搜索命中或老师原话" aria-label="搜索告警" />
+          <button id="btn-alert-fail" class="small-button" aria-pressed="false" title="只看推送失败或未送达的告警">仅看未送达</button>
+          <span class="stats" id="alert-filter-count" role="status"></span>
+        </span>
+      </div>
+      <div id="alert-hit-chips" class="keyword-preview alert-chips hidden" aria-label="按命中关键词筛选"></div>
       <div class="table-wrap"><table id="alerts-table">
         <thead>
           <tr><th>时间</th><th>命中</th><th>老师原话</th><th>钉钉</th></tr>
@@ -103,58 +113,10 @@
       </table></div>
     </section>
   </main>
-
-  <dialog id="settings-modal" aria-labelledby="settings-title">
-    <div class="modal-head">
-      <h3 id="settings-title">连接与配置</h3>
-      <button class="ghost" id="btn-close-settings" aria-label="关闭设置">✕</button>
-    </div>
-
-    <div class="modal-body">
-      <section class="conn">
-        <div class="conn-title">
-          <i class="led" id="led-zhiyun"></i>
-          <b>智云课堂认证</b>
-          <span class="conn-status" id="zhiyun-status">未测试</span>
-        </div>
-        <label>学号<input id="set-username" type="text" autocomplete="off" /></label>
-        <label>密码<input id="set-password" type="password" placeholder="" autocomplete="new-password" /></label>
-        <button class="test-btn" id="btn-save-test-zhiyun">保存并测试登录</button>
-      </section>
-
-      <section class="conn">
-        <div class="conn-title">
-          <i class="led" id="led-ding"></i>
-          <b>钉钉机器人</b>
-          <span class="conn-status" id="ding-status">未测试</span>
-        </div>
-        <label class="check"><input id="set-ding-enabled" type="checkbox" /><span>启用钉钉推送</span></label>
-        <label>Webhook<input id="set-ding-webhook" type="text" autocomplete="off" /></label>
-        <label>加签密钥<input id="set-ding-secret" type="password" placeholder="" autocomplete="new-password" /></label>
-        <button class="test-btn" id="btn-save-test-ding">保存并发送测试消息</button>
-        <p class="note">机器人无需登录：钉钉群「设置 → 智能群助手 → 添加机器人 → 自定义」创建。
-        若用「自定义关键词」安全设置，消息标题里必须包含那个关键词。</p>
-      </section>
-
-      <details class="advanced">
-        <summary>高级选项</summary>
-        <label>消息标题<input id="set-alert-title" type="text" /></label>
-        <label>监听模式
-          <select id="set-listen-mode">
-            <option value="auto">auto（推荐）</option>
-            <option value="ws">ws（强制 WebSocket）</option>
-            <option value="poll">poll（强制轮询）</option>
-          </select>
-        </label>
-        <label>轮询间隔（秒）<input id="set-poll-interval" type="number" min="3" /></label>
-        <label class="check"><input id="set-final-only" type="checkbox" /><span>仅句子定稿后告警（稳但慢）</span></label>
-        <label class="check"><input id="set-debug-raw" type="checkbox" /><span>DEBUG_RAW（打印未解析 WS 帧）</span></label>
-        <button class="test-btn" id="btn-save-advanced">保存高级选项</button>
-      </details>
-    </div>
-  </dialog>
+  </div>
 
   <div id="toasts" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js"></script>
+  <script src="/shared.js" defer></script>
+  <script src="/app.js" defer></script>
 </body>
 </html>

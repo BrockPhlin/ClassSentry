@@ -209,6 +209,10 @@ export function createMonitor({ getConfig, historyPath, apiFactory = createApi }
     markSessionDirty() {
       sessionDirty = true;
     },
+    // 课件导出等旁路功能：确保登录后把会话交给回调（带一次重登重试）
+    withSession(fn) {
+      return withRelogin(() => fn({ classroom: sessionRef.classroom, api: sessionRef.api }));
+    },
 
     async listCourses() {
       return withRelogin(() => sessionRef.api.listCourses());

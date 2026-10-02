@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>课件库 · ClassSentry 课堂哨兵</title>
+  <meta name="theme-color" content="#faf9f5" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23faf9f5'/%3E%3Ccircle cx='32' cy='32' r='19' fill='none' stroke='%23e7e3d8' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='11' fill='%23d97757'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Serif+SC:wght@600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body data-page="deck">
+  <aside class="sidebar">
+    <div class="brand">
+      <a class="brand-mark" href="/">CLASS·SENTRY<em>哨兵</em></a>
+      <span class="brand-sub">智云课堂关键词预警</span>
+    </div>
+    <nav class="nav" aria-label="页面导航">
+      <a href="/" data-nav="live"><i class="nav-ico" aria-hidden="true">◉</i><span class="nav-txt"><b>直播台</b><small>字幕 · 关键词预警</small></span></a>
+      <a href="/checkin" data-nav="checkin"><i class="nav-ico" aria-hidden="true">✓</i><span class="nav-txt"><b>自动签到</b><small>点名自动应答</small></span></a>
+      <a href="/deck" data-nav="deck"><i class="nav-ico" aria-hidden="true">▤</i><span class="nav-txt"><b>课件库</b><small>板书导出 PPT</small></span></a>
+      <a href="/settings" data-nav="settings"><i class="nav-ico" aria-hidden="true">⚙</i><span class="nav-txt"><b>设置</b><small>连通与关键词</small></span></a>
+    </nav>
+    <div class="sidebar-foot">
+      <a class="chip" href="/settings" id="chip-zhiyun" title="智云登录状态，点击去设置">
+        <i class="led" id="led-zhiyun"></i><span>智云</span><b>未测试</b>
+      </a>
+      <a class="chip" href="/settings" id="chip-ding" title="钉钉机器人状态，点击去设置">
+        <i class="led" id="led-ding"></i><span>钉钉</span><b>未测试</b>
+      </a>
+      <span class="conn-dot" id="connection-status" role="status">连接中</span>
+    </div>
+  </aside>
+  <div class="content">
+  <main class="narrow">
+    <section class="page-head">
+      <span class="eyebrow">COURSEWARE / 课件与板书</span>
+      <h1>把板书，<br />带回家。</h1>
+      <p>拉取该场次的课件/板书截图时间线，逐页导出为 PPTX；老师在每一页讲的内容会写进对应幻灯片的演讲者备注。</p>
+    </section>
+
+    <section class="card" id="deck-control">
+      <h2><i>01</i>选择场次</h2>
+      <label class="field-label" for="course-select">课程</label>
+      <div class="grid-row">
+        <select id="course-select" disabled><option value="">先加载课程</option></select>
+        <button id="btn-load-courses">加载课程</button>
+      </div>
+      <label class="field-label" for="session-select">课堂场次</label>
+      <div class="grid-row">
+        <select id="session-select" disabled><option value="">先选课程</option></select>
+      </div>
+      <div id="session-info" class="probe hidden"></div>
+      <button id="btn-deck" disabled title="把该场次的课件/板书截图与对应讲稿导出为 PPTX（讲稿写入演讲者备注）">⤓ 下载课件 PPT</button>
+      <div id="deck-error" class="error-msg hidden" role="alert"></div>
+      <p class="note">生成需要逐页下载图片，可能需要一两分钟；转写不可用时仅导出截图。</p>
+    </section>
+
+    <section class="card" id="deck-history-card">
+      <div class="section-head"><h2><i>02</i>导出历史</h2><button id="btn-deck-clear-history" class="small-button hidden" title="清空本机的导出记录（不影响已下载的文件）">清空记录</button></div>
+      <div id="deck-history" class="deck-history"><p class="note">还没有导出记录 · 第一次成功导出后会显示在这里，可一键重新生成。</p></div>
+    </section>
+  </main>
+  </div>
+
+  <div id="toasts" role="status" aria-live="polite"></div>
+  <script src="/shared.js" defer></script>
+  <script src="/deck.js" defer></script>
+</body>
+</html>

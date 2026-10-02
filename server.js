@@ -16,6 +16,8 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 
 import { buildConfig } from "./config.js";
+import { createCheckin } from "./checkin.js";
+import { buildSessionDeck } from "./deck.js";
 import { createMonitor } from "./monitor.js";
 import { createNotifier } from "./notify.js";
 import {
@@ -36,8 +38,27 @@ const monitor = createMonitor({
   historyPath: path.join(__dirname, "alerts.json"),
 });
 
+const checkin = createCheckin({ getConfig: buildConfig });
+
 function badRequest(message, code = "bad_request") {
   return Object.assign(new Error(message), { status: 400, code });
+}
+
+// 连通性验证结果（内存态）：由各页面共享，跨页面保持徽标一致；重启后需重新测试。
+// 修改对应配置（凭据 / 钉钉参数）即失效，防止沿用过期状态。
+const verified = { zhiyun: null, ding: null }; // { at, detail } | null
+
+function markVerified(which, detail = "") {
+  verified[which] = { at: Date.now(), detail };
+}
+
+function clearVerified(which) {
+  verified[which] = null;
+}
+
+// /api/state 与 SSE hello 快照统一带上 verified
+function withVerified(state) {
+  return { ...state, verified: { ...verified } };
 }
 
 function updatesFromBody(body = {}) {
@@ -102,8 +123,15 @@ const app = express();
 app.use(express.json({ limit: "200kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
+// 多页面干净地址
+for (const name of ["checkin", "deck", "settings"]) {
+  app.get(`/${name}`, (req, res) => {
+    res.sendFile(path.join(__dirname, "public", `${name}.html`));
+  });
+}
+
 app.get("/api/state", (req, res) => {
-  res.json(monitor.getState());
+  res.json(withVerified(monitor.getState()));
 });
 
 app.get("/api/settings", (req, res) => {
@@ -139,6 +167,15 @@ app.put("/api/settings", (req, res) => {
   }
   if (updates.ZJU_USERNAME !== undefined || updates.ZJU_PASSWORD !== undefined) {
     monitor.markSessionDirty();
+    checkin.markSessionDirty();
+    clearVerified("zhiyun");
+  }
+  if (
+    updates.ENABLE_DINGTALK !== undefined ||
+    updates.DINGTALK_WEBHOOK !== undefined ||
+    updates.DINGTALK_SECRET !== undefined
+  ) {
+    clearVerified("ding");
   }
   res.json({
     settings: toSafeSettings(buildConfig()),
@@ -149,23 +186,31 @@ app.put("/api/settings", (req, res) => {
 app.post("/api/settings/test-ding", async (req, res) => {
   try {
     await createNotifier(buildConfig()).sendTest();
+    markVerified("ding", "测试消息已发送");
     res.json({ ok: true });
   } catch (e) {
+    clearVerified("ding");
     res.json({ ok: false, error: e.message });
   }
 });
 
 app.post("/api/login-test", async (req, res) => {
   try {
-    res.json(await monitor.loginTest());
+    const r = await monitor.loginTest();
+    markVerified("zhiyun", `${r.courseCount} 门课`);
+    res.json(r);
   } catch (e) {
+    clearVerified("zhiyun");
     res.json({ ok: false, error: e.message });
   }
 });
 
 app.get("/api/courses", async (req, res, next) => {
   try {
-    res.json({ courses: await monitor.listCourses() });
+    const courses = await monitor.listCourses();
+    // 拉取课程成功同样证明智云连通（回访用户未手动测试过的场景）
+    markVerified("zhiyun", `${courses.length} 门课`);
+    res.json({ courses });
   } catch (e) {
     next(e);
   }
@@ -209,6 +254,52 @@ app.post("/api/monitor/reset", (req, res) => {
   res.json({ state: monitor.reset() });
 });
 
+app.post("/api/checkin/start", async (req, res, next) => {
+  try {
+    const state = await checkin.start();
+    res.status(202).json({ state });
+  } catch (e) {
+    next(e);
+  }
+});
+
+app.post("/api/checkin/stop", (req, res) => {
+  res.json({ state: checkin.stop() });
+});
+
+app.get("/api/checkin/state", (req, res) => {
+  res.json({ state: checkin.getState() });
+});
+
+// 课件/板书截图 + 转写 → PPTX 下载
+app.get("/api/deck", async (req, res, next) => {
+  try {
+    const { courseId, subId, courseTitle, title } = req.query;
+    if (!courseId || !subId) throw badRequest("需要 courseId 和 subId");
+    const result = await monitor.withSession(({ api }) =>
+      buildSessionDeck({
+        api,
+        courseId,
+        subId,
+        courseTitle: String(courseTitle || ""),
+        sessionTitle: String(title || ""),
+      })
+    );
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    );
+    const asciiName = result.filename.replace(/[^\w.-]+/g, "_");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(result.filename)}`
+    );
+    res.send(result.buffer);
+  } catch (e) {
+    next(e);
+  }
+});
+
 app.get("/api/alerts", (req, res) => {
   res.json({ alerts: monitor.getAlerts() });
 });
@@ -244,15 +335,18 @@ app.get("/api/events", (req, res) => {
   write({
     type: "hello",
     payload: {
-      state: monitor.getState(),
+      state: withVerified(monitor.getState()),
       transcript: monitor.snapshotTranscript(),
       alerts: monitor.getAlerts(),
+      checkin: checkin.getState(),
     },
   });
   const unsubscribe = monitor.subscribe(write);
+  const unsubscribeCheckin = checkin.subscribe(write);
   sseClients.add(res);
   req.on("close", () => {
     unsubscribe();
+    unsubscribeCheckin();
     sseClients.delete(res);
   });
 });
@@ -294,6 +388,11 @@ function shutdown() {
   console.log("\n正在退出…");
   try {
     monitor.stop();
+  } catch {
+    // 忽略
+  }
+  try {
+    checkin.stop();
   } catch {
     // 忽略
   }

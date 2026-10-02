@@ -5,6 +5,7 @@ const LIVE_LIST_URL =
   "https://yjapi.cmc.zju.edu.cn/courseapi/v2/course-live/search-live-course-list";
 const TRANS_RESULT_URL =
   "https://yjapi.cmc.zju.edu.cn/courseapi/v3/web-socket/search-trans-result";
+const PPT_TIMELINE_URL = "https://classroom.zju.edu.cn/pptnote/v1/schedule/search-ppt";
 
 // catalogue 条目 status 含义（官方前端 + 开源项目交叉验证）
 export const SESSION_STATUS = {
@@ -185,6 +186,51 @@ export function createApi(classroom, config) {
         .map((item) => normaliseTransItem(item, { source, sessionStartMs }))
         .filter(Boolean);
       return { finished, items };
+    },
+
+    // 课件/板书截图时间线 → [{url, createdSec}]（createdSec 为相对开场的秒数）
+    async fetchPptTimeline(courseId, subId) {
+      const params = new URLSearchParams({
+        course_id: String(courseId),
+        sub_id: String(subId),
+      });
+      const data = await getJson(`${PPT_TIMELINE_URL}?${params}`, "课件截图");
+      const list = Array.isArray(data?.list) ? data.list : [];
+      const items = [];
+      for (const item of list) {
+        let content = item?.content;
+        if (typeof content === "string") {
+          try {
+            content = JSON.parse(content);
+          } catch {
+            continue;
+          }
+        }
+        const url = String(content?.pptimgurl || "");
+        if (!url) continue;
+        items.push({ url, createdSec: Number(item?.created_sec || 0) });
+      }
+      return items;
+    },
+
+    // 下载课件图片（带认证 cookie；返回 {buffer, type}）
+    async fetchImage(url) {
+      let res;
+      try {
+        res = await classroom.fetch(url, {
+          signal: AbortSignal.timeout(Math.max(config.requestTimeoutMs * 2, 30000)),
+        });
+      } catch (e) {
+        throw new Error(`课件图片下载失败：${e.message}`);
+      }
+      if (!res.ok) {
+        throw new Error(`课件图片下载失败：HTTP ${res.status}`);
+      }
+      const buffer = Buffer.from(await res.arrayBuffer());
+      const type = String(res.headers?.get?.("content-type") || "image/png")
+        .split(";")[0]
+        .trim();
+      return { buffer, type };
     },
   };
 }

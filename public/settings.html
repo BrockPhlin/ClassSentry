@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>设置 · ClassSentry 课堂哨兵</title>
+  <meta name="theme-color" content="#faf9f5" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23faf9f5'/%3E%3Ccircle cx='32' cy='32' r='19' fill='none' stroke='%23e7e3d8' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='11' fill='%23d97757'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Serif+SC:wght@600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body data-page="settings">
+  <aside class="sidebar">
+    <div class="brand">
+      <a class="brand-mark" href="/">CLASS·SENTRY<em>哨兵</em></a>
+      <span class="brand-sub">智云课堂关键词预警</span>
+    </div>
+    <nav class="nav" aria-label="页面导航">
+      <a href="/" data-nav="live"><i class="nav-ico" aria-hidden="true">◉</i><span class="nav-txt"><b>直播台</b><small>字幕 · 关键词预警</small></span></a>
+      <a href="/checkin" data-nav="checkin"><i class="nav-ico" aria-hidden="true">✓</i><span class="nav-txt"><b>自动签到</b><small>点名自动应答</small></span></a>
+      <a href="/deck" data-nav="deck"><i class="nav-ico" aria-hidden="true">▤</i><span class="nav-txt"><b>课件库</b><small>板书导出 PPT</small></span></a>
+      <a href="/settings" data-nav="settings"><i class="nav-ico" aria-hidden="true">⚙</i><span class="nav-txt"><b>设置</b><small>连通与关键词</small></span></a>
+    </nav>
+    <div class="sidebar-foot">
+      <a class="chip" href="/settings" id="chip-zhiyun" title="智云登录状态">
+        <i class="led" id="led-zhiyun"></i><span>智云</span><b>未测试</b>
+      </a>
+      <a class="chip" href="/settings" id="chip-ding" title="钉钉机器人状态">
+        <i class="led" id="led-ding"></i><span>钉钉</span><b>未测试</b>
+      </a>
+      <span class="conn-dot" id="connection-status" role="status">连接中</span>
+    </div>
+  </aside>
+  <div class="content">
+  <main class="narrow">
+    <section class="page-head">
+      <span class="eyebrow">SETTINGS / 连接与配置</span>
+      <h1>先连通，<br />再上岗。</h1>
+      <p>完成智云与钉钉两项连通性测试后，回直播台选课程、选场次、启动。关键词与冷却对下一次监控任务生效。</p>
+      <div id="setup-steps" class="setup-steps" aria-label="配置进度"></div>
+    </section>
+
+    <section class="card conn-card">
+      <h2><i>01</i>智云课堂认证</h2>
+      <div class="conn-line"><i class="led" id="led-zhiyun"></i><b>登录状态</b><span class="conn-status" id="zhiyun-status">未测试</span></div>
+      <label>学号<input id="set-username" type="text" autocomplete="off" /></label>
+      <label>密码<span class="secret-field"><input id="set-password" type="password" placeholder="" autocomplete="new-password" /><button type="button" id="btn-toggle-password" class="small-button" aria-pressed="false" title="显示或隐藏密码">显示</button></span></label>
+      <button class="test-btn" id="btn-save-test-zhiyun">保存并测试登录</button>
+    </section>
+
+    <section class="card conn-card">
+      <h2><i>02</i>钉钉机器人</h2>
+      <div class="conn-line"><i class="led" id="led-ding"></i><b>推送状态</b><span class="conn-status" id="ding-status">未测试</span></div>
+      <label class="check"><input id="set-ding-enabled" type="checkbox" /><span>启用钉钉推送</span></label>
+      <label>Webhook<input id="set-ding-webhook" type="text" autocomplete="off" /></label>
+      <label>加签密钥<span class="secret-field"><input id="set-ding-secret" type="password" placeholder="" autocomplete="new-password" /><button type="button" id="btn-toggle-secret" class="small-button" aria-pressed="false" title="显示或隐藏密钥">显示</button></span></label>
+      <button class="test-btn" id="btn-save-test-ding">保存并发送测试消息</button>
+      <p class="note">机器人无需登录：钉钉群「设置 → 智能群助手 → 添加机器人 → 自定义」创建。若用「自定义关键词」安全设置，消息标题里必须包含那个关键词。</p>
+    </section>
+
+    <section class="card conn-card">
+      <h2><i>03</i>预警关键词</h2>
+      <div class="grid-row">
+        <input aria-label="预警关键词，逗号分隔" id="kw-input" type="text" placeholder="签到,扫码,二维码,小测,测验,点名" />
+      </div>
+      <div class="grid-row">
+        <label class="inline">同词冷却 <input id="kw-cooldown" type="number" min="1" /> 秒</label>
+        <button id="btn-apply-kw" class="primary">应用</button>
+      </div>
+      <div id="keyword-preview" class="keyword-preview" aria-label="当前保存的关键词"></div>
+      <p class="note kw-hint">点击词条可移除；修改后点「应用」保存，对下一次监控任务生效。</p>
+    </section>
+
+    <section class="card conn-card">
+      <h2><i>04</i>高级选项</h2>
+      <label>消息标题<input id="set-alert-title" type="text" /></label>
+      <label>监听模式
+        <select id="set-listen-mode">
+          <option value="auto">auto（推荐）</option>
+          <option value="ws">ws（强制 WebSocket）</option>
+          <option value="poll">poll（强制轮询）</option>
+        </select>
+      </label>
+      <label>轮询间隔（秒）<input id="set-poll-interval" type="number" min="3" /></label>
+      <label class="check"><input id="set-final-only" type="checkbox" /><span>仅句子定稿后告警（稳但慢）</span></label>
+      <label class="check"><input id="set-debug-raw" type="checkbox" /><span>DEBUG_RAW（打印未解析 WS 帧）</span></label>
+      <button class="test-btn" id="btn-save-advanced">保存高级选项</button>
+    </section>
+  </main>
+  </div>
+
+  <div id="toasts" role="status" aria-live="polite"></div>
+  <script src="/shared.js" defer></script>
+  <script src="/settings.js" defer></script>
+</body>
+</html>

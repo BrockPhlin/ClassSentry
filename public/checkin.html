@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>自动签到 · ClassSentry 课堂哨兵</title>
+  <meta name="theme-color" content="#faf9f5" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23faf9f5'/%3E%3Ccircle cx='32' cy='32' r='19' fill='none' stroke='%23e7e3d8' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='11' fill='%23d97757'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Serif+SC:wght@600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body data-page="checkin">
+  <aside class="sidebar">
+    <div class="brand">
+      <a class="brand-mark" href="/">CLASS·SENTRY<em>哨兵</em></a>
+      <span class="brand-sub">智云课堂关键词预警</span>
+    </div>
+    <nav class="nav" aria-label="页面导航">
+      <a href="/" data-nav="live"><i class="nav-ico" aria-hidden="true">◉</i><span class="nav-txt"><b>直播台</b><small>字幕 · 关键词预警</small></span></a>
+      <a href="/checkin" data-nav="checkin"><i class="nav-ico" aria-hidden="true">✓</i><span class="nav-txt"><b>自动签到</b><small>点名自动应答</small></span></a>
+      <a href="/deck" data-nav="deck"><i class="nav-ico" aria-hidden="true">▤</i><span class="nav-txt"><b>课件库</b><small>板书导出 PPT</small></span></a>
+      <a href="/settings" data-nav="settings"><i class="nav-ico" aria-hidden="true">⚙</i><span class="nav-txt"><b>设置</b><small>连通与关键词</small></span></a>
+    </nav>
+    <div class="sidebar-foot">
+      <a class="chip" href="/settings" id="chip-zhiyun" title="智云登录状态，点击去设置">
+        <i class="led" id="led-zhiyun"></i><span>智云</span><b>未测试</b>
+      </a>
+      <a class="chip" href="/settings" id="chip-ding" title="钉钉机器人状态，点击去设置">
+        <i class="led" id="led-ding"></i><span>钉钉</span><b>未测试</b>
+      </a>
+      <span class="conn-dot" id="connection-status" role="status">连接中</span>
+    </div>
+  </aside>
+  <div class="content">
+  <main class="narrow">
+    <section class="page-head">
+      <span class="eyebrow">AUTO CHECK-IN / 学在浙大</span>
+      <h1>点名了，<br />一键应答。</h1>
+      <p>听到老师点名，点一次开启签到模式：自动轮询进行中的点名并应答，雷达定位与数字口令都支持。独立于监控任务，15 分钟无点名自动停止。</p>
+    </section>
+
+    <section class="card" id="checkin-control">
+      <h2><i>01</i>签到模式</h2>
+      <button id="btn-checkin" disabled title="自动应答学在浙大点名（雷达定位 / 数字口令）">▷ 开启签到</button>
+      <div id="checkin-status" class="checkin-status hidden"></div>
+      <div id="checkin-mini-stats" class="mini-stats hidden">
+        <div><span>已签到</span><strong id="stat-answered">0</strong></div>
+        <div><span>失败</span><strong id="stat-failed">0</strong></div>
+        <div><span>待应答</span><strong id="stat-active">0</strong></div>
+        <div><span>已运行</span><strong id="stat-runtime">—</strong></div>
+      </div>
+      <p class="note">听到老师点名后点「开启签到」即可离开页面；雷达点名优先使用首选信号点（<code>CHECKIN_RADAR_AT</code>，默认玉泉教一），失败时遍历各校区信标并按距离估算位置；数字口令先从接口直接取码，取不到再自动穷举。15 分钟无点名自动停止。</p>
+    </section>
+
+    <section class="card wide" id="checkin-section">
+      <div class="section-head"><h2><i>02</i>签到记录</h2><span class="head-tools"><button id="btn-checkin-fail" class="small-button" aria-pressed="false" title="只看失败的记录">只看失败</button><span class="stats" id="checkin-stats"></span></span></div>
+      <div class="table-wrap"><table id="checkin-table">
+        <thead>
+          <tr><th>时间</th><th>课程</th><th>类型</th><th>结果</th></tr>
+        </thead>
+        <tbody id="checkin-results"></tbody>
+      </table></div>
+    </section>
+  </main>
+  </div>
+
+  <div id="toasts" role="status" aria-live="polite"></div>
+  <script src="/shared.js" defer></script>
+  <script src="/checkin.js" defer></script>
+</body>
+</html>
