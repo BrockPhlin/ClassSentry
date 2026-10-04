@@ -26,6 +26,15 @@ cp .env.example .env    # 填学号密码与钉钉机器人
 npm start               # 打开 http://127.0.0.1:5175
 ```
 
+## 桌面应用（macOS）
+
+不需要浏览器，也不需要任何服务器：`npm run app:build` 会把本地服务整体打包进 app（`release/` 下生成 `ClassSentry.app` 与 `.dmg`）。
+
+- app 内嵌同一套控制台，数据（`.env` / `alerts.json`）存放在 `~/Library/Application Support/ClassSentry/`
+- 关闭窗口不退出，监控继续；`Cmd+Q` 才真正停止
+- 若 5175 已有 `node server.js` 在跑，app 会直接复用它而不是重复启动
+- 首次以未签名应用运行如被 Gatekeeper 拦下：右键 →「打开」，或 `xattr -cr /Applications/ClassSentry.app`
+
 「设置」页完成智云与钉钉两项连通性测试 → 直播台选课程、选场次 → **启动**。
 关键词、冷却均可配，关键词支持中英文逗号（`.env.example` 有完整说明）。
 

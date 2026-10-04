@@ -4,3 +4,5 @@ downloads/
 alerts.json
 *.log
 .DS_Store
+release/
+build/icon.iconset/

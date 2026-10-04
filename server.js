@@ -29,13 +29,15 @@ import {
 } from "./settings.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ENV_PATH = path.join(__dirname, ".env");
+// .env / alerts.json 跟随运行目录：项目里 `node server.js` 与现在完全一致；
+// 桌面 app（electron-main.js）会先把 cwd 切到用户数据目录，数据就落在那里。
+const ENV_PATH = path.resolve(".env");
 const HOST = process.env.WEB_HOST || "127.0.0.1";
 const WEB_PORT = Number(process.env.WEB_PORT || 5175);
 
 const monitor = createMonitor({
   getConfig: buildConfig,
-  historyPath: path.join(__dirname, "alerts.json"),
+  historyPath: path.resolve("alerts.json"),
 });
 
 const checkin = createCheckin({ getConfig: buildConfig });

@@ -1,17 +1,19 @@
 {
   "name": "class-sentry",
-  "version": "0.2.0",
-  "description": "课堂哨兵：智云课堂直播语音关键词钉钉预警 + ON-AIR 网页控制台",
+  "version": "0.3.0",
+  "description": "课堂哨兵：智云课堂直播语音关键词钉钉预警 + ON-AIR 网页控制台 + 桌面应用",
   "type": "module",
   "private": true,
   "license": "UNLICENSED",
   "engines": {
     "node": ">=18"
   },
-  "main": "index.js",
+  "main": "electron-main.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "app": "electron .",
+    "app:build": "electron-builder --mac"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
@@ -21,5 +23,33 @@
     "login-zju": "^1.0.9",
     "pptxgenjs": "^4.0.1",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.brockphlin.classsentry",
+    "productName": "ClassSentry",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron-main.js",
+      "*.js",
+      "listeners/**/*",
+      "public/**/*",
+      "!release/**",
+      "!test/**"
+    ],
+    "mac": {
+      "target": [
+        { "target": "dir", "arch": ["arm64"] },
+        { "target": "dmg", "arch": ["arm64"] }
+      ],
+      "icon": "build/icon.icns",
+      "identity": null,
+      "category": "public.app-category.education"
+    }
   }
 }
