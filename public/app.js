@@ -131,6 +131,7 @@ const alertFilter = { text: "", failOnly: false, hit: null };
 function pushStatusCell(alert) {
   if (alert.sent) return el("span", "push-ok", "已推送");
   if (alert.reason === "disabled") return el("span", "push-off", "未启用");
+  if (alert.reason === "llm_filtered") return el("span", "push-off", "误报拦截");
   return el("span", "push-fail", `失败：${alert.reason || "未知"}`);
 }
 

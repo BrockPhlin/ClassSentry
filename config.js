@@ -29,6 +29,8 @@ export function buildConfig() {
     enableDingtalk: process.env.ENABLE_DINGTALK === "true",
     dingtalkWebhook: process.env.DINGTALK_WEBHOOK || "",
     dingtalkSecret: process.env.DINGTALK_SECRET || "",
+    llmReview: parseBoolean(process.env.LLM_REVIEW, false),
+    llmModel: process.env.LLM_MODEL || "claude-haiku-4-5",
     requestTimeoutMs: Number(process.env.REQUEST_TIMEOUT_MS || 20000),
     debugRaw: parseBoolean(process.env.DEBUG_RAW, false),
   };

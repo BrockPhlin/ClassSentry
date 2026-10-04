@@ -53,6 +53,28 @@ export function sanitizeFilename(s, fallback = "课堂课件") {
   return (cleaned || fallback).slice(0, 80);
 }
 
+const IMAGE_CONCURRENCY = 6; // 图片并发下载路数；导出耗时从逐张串行的"一两分钟"压到十几秒
+
+// 并发下载全部图片，结果按 slides 原页序返回；任意一张失败整体失败（与串行版语义一致）
+async function fetchAllImages(slides, fetchImage, onProgress) {
+  const results = new Array(slides.length);
+  let next = 0;
+  let done = 0;
+  async function worker() {
+    while (next < slides.length) {
+      const i = next++;
+      const { buffer, type } = await fetchImage(slides[i].url);
+      results[i] = { buffer, type };
+      done += 1;
+      onProgress?.(done, slides.length);
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(IMAGE_CONCURRENCY, slides.length) }, worker)
+  );
+  return results;
+}
+
 // slides: [{url, createdSec, notes}]；fetchImage(url) → {buffer, type}
 export async function buildDeck({ title, subtitle = "", slides, fetchImage, onProgress }) {
   const pptx = new PptxGenJS();
@@ -66,8 +88,9 @@ export async function buildDeck({ title, subtitle = "", slides, fetchImage, onPr
     cover.addText(subtitle, { x: 0.8, y: 3.8, w: 11.7, fontSize: 16, color: "8B8677" });
   }
 
+  const images = await fetchAllImages(slides, fetchImage, onProgress);
   for (let i = 0; i < slides.length; i++) {
-    const { buffer, type } = await fetchImage(slides[i].url);
+    const { buffer, type } = images[i];
     const prefix = MIME_PREFIX.has(type) ? type : "image/png";
     const slide = pptx.addSlide();
     slide.addImage({
@@ -75,7 +98,6 @@ export async function buildDeck({ title, subtitle = "", slides, fetchImage, onPr
       ...imagePlacement(),
     });
     if (slides[i].notes) slide.addNotes(slides[i].notes);
-    onProgress?.(i + 1, slides.length);
   }
 
   const buffer = await pptx.write({ outputType: "nodebuffer" });

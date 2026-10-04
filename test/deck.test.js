@@ -165,6 +165,28 @@ test('buildSessionDeck：时间线为空时报错；转写失败不阻塞', asyn
   assert.equal(slideCount, 1);
 });
 
+test('buildDeck：图片并发下载且保持页序', async () => {
+  let inFlight = 0;
+  let maxInFlight = 0;
+  const started = [];
+  const { buffer, slideCount } = await buildDeck({
+    title: '并发测试',
+    slides: [1, 2, 3, 4, 5, 6].map((n) => ({ url: `u${n}`, createdSec: n })),
+    fetchImage: async (url) => {
+      started.push(url);
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      inFlight -= 1;
+      return { buffer: TINY_PNG, type: 'image/png' };
+    },
+  });
+  assert.equal(slideCount, 6);
+  assert.equal(buffer.subarray(0, 2).toString(), 'PK');
+  assert.ok(maxInFlight > 1, `应并发下载（实测峰值 ${maxInFlight} 路）`);
+  assert.deepEqual(started, ['u1', 'u2', 'u3', 'u4', 'u5', 'u6'], '任务按页序提交');
+});
+
 test('api.fetchPptTimeline：兼容 content 字符串/对象两种形态', async () => {
   const classroom = {
     fetch: async () => ({

@@ -29,7 +29,13 @@ function page({ html = 'index.html', scripts = ['shared.js', 'app.js'], handler,
   }
   const nodes = new Map();
   const htmlText = fs.readFileSync(new URL(`../public/${html}`, import.meta.url), 'utf8');
-  for (const match of htmlText.matchAll(/<([\w-]+)[^>]*\bid="([^"]+)"/g)) nodes.set(match[2], new Element(match[1]));
+  // HTML 标记了 disabled 的元素在假 DOM 里也以 disabled 起始，
+  // 否则"标记了 disabled 却没有启用逻辑"的 bug 会漏出测试网（签到按钮就栽过）
+  for (const match of htmlText.matchAll(/<([\w-]+)[^>]*\bid="([^"]+)"/g)) {
+    const node = new Element(match[1]);
+    if (/\bdisabled\b/.test(match[0])) node.disabled = true;
+    nodes.set(match[2], node);
+  }
   const radio = new Element('input'); radio.value = 'monitor';
   const state = { phase: 'idle', course: null, session: null, stats: { fragments: 0, alerts: 0 }, config: { enableDingtalk: false, keywords: ['签到'] } };
   const context = vm.createContext({
@@ -220,6 +226,11 @@ test('签到：接口报错时弹出错误 toast', async () => {
   assert.equal(toasts.length, 1);
   assert.equal(toasts[0].className, 'toast err');
   assert.ok(toasts[0].textContent.includes('签到模式已在运行'));
+});
+
+test('签到：页面加载后按钮即可点击，不应停留在初始 disabled', () => {
+  const p = page({ html: 'checkin.html', scripts: ['shared.js', 'checkin.js'], handler: () => ({}) });
+  assert.equal(p.nodes.get('btn-checkin').disabled, false, '签到按钮加载后必须可点击');
 });
 
 test('签到：统计卡片展示已签到/失败/待应答/运行时长', () => {
