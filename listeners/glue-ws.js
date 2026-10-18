@@ -103,11 +103,18 @@ export class GlueWsListener extends EventEmitter {
       ws.send("in" + JSON.stringify({ version: this.handshakeVersion }));
       this.emit("status", "已连接，等待字幕数据…");
       const mode = this.everConnected ? "reconnect" : "initial";
-      this.everConnected = true;
       if (this.fetchCatchUp) {
-        Promise.resolve(this.fetchCatchUp({ mode })).catch((e) => {
-          this.emit("status", `补齐转写失败：${e.message}`);
-        });
+        // 首连补齐成功后才算「连过」：若首次补齐失败，下次重连仍按 initial 静默登记历史，
+        // 不会把全部旧句子当成新句子告警。
+        Promise.resolve(this.fetchCatchUp({ mode }))
+          .then(() => {
+            this.everConnected = true;
+          })
+          .catch((e) => {
+            this.emit("status", `补齐转写失败：${e.message}`);
+          });
+      } else {
+        this.everConnected = true;
       }
     });
     ws.on("message", (data) => this.handleMessage(String(data)));
@@ -179,7 +186,10 @@ export class GlueWsListener extends EventEmitter {
       "status",
       `连接断开，${Math.round(delay / 1000)} 秒后重连`
     );
-    this.reconnectTimer = setTimeout(() => this.connect(), delay);
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.connect();
+    }, delay);
   }
 
   checkStale() {
@@ -217,11 +227,13 @@ export class GlueWsListener extends EventEmitter {
   forceReconnect() {
     if (this.ws) {
       try {
-        this.ws.close();
+        // 半死连接上 close() 要等 ws 库 30s 超时才触发 close 事件；terminate() 立即销毁
+        this.ws.terminate();
       } catch {
         // close 已触发 scheduleReconnect
       }
-    } else {
+    } else if (!this.reconnectTimer) {
+      // 退避重连已排队时不再重复 connect()，避免出现双 socket
       this.connect();
     }
   }

@@ -2,7 +2,7 @@ export const DEFAULT_KEYWORDS = ["签到", "扫码", "二维码", "小测", "测
 
 export function compileKeywords(raw, defaults = DEFAULT_KEYWORDS) {
   const list = String(raw || "")
-    .split(/[,，]/)
+    .split(/[,，、]/)
     .map((k) => k.trim().toLowerCase())
     .filter(Boolean);
   const source = list.length ? list : defaults;
@@ -27,6 +27,11 @@ export function createMatcher({ keywords, cooldownMs }) {
         hits.push(keyword);
       }
       return hits;
+    },
+    // 推送失败 / LLM 判定误报时归还冷却：feed 时已先占位（防止异步期间同一词重复触发），
+    // 没真正发出去就不该让后面的真实告警被吞掉。
+    release(hits) {
+      for (const keyword of hits) lastAlertAt.delete(keyword);
     },
   };
 }

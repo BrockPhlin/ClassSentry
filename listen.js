@@ -38,8 +38,16 @@ export function createSessionListener({
   let degraded = false;
   let stopped = false;
 
+  // WS 已送达的定稿句子（归一化文本）。补齐接口返回的 key 前缀与 WS 不同，
+  // 单靠 pipeline 的 seen 无法跨源去重，重连补齐时用它避免把旧话再告警一遍。
+  const wsDelivered = new Set();
+  const normaliseText = (text) => String(text || "").replace(/\s+/g, "").toLowerCase();
+
   function wire(listener) {
     listener.on("fragment", (fragment) => {
+      if (fragment.source === "ws" && fragment.final) {
+        wsDelivered.add(normaliseText(fragment.text));
+      }
       pipeline.ingest(fragment).catch((e) => {
         log(`处理转写失败：${e.message}`, "error");
       });
@@ -75,12 +83,23 @@ export function createSessionListener({
         // 跨源 dedupe key 对不齐（WS 为 w: 前缀），重复告警由每词冷却压制。
         fetchCatchUp: async ({ mode }) => {
           const { items } = await fetchItems();
+          let replayed = 0;
           for (const fragment of items) {
             // 首连：静默登记全部历史，避免进场即对旧话告警；
-            // 重连：只对 seen 之外（断线期间）的新句子渲染+匹配
-            await pipeline.ingest(fragment, { silent: mode === "initial" });
+            // 重连：WS 已送达过的句子（按归一化文本跨源比对）直接静默登记，
+            //       只对断线期间真正漏掉的新句子渲染+匹配
+            const alreadyDelivered =
+              mode === "reconnect" && wsDelivered.has(normaliseText(fragment.text));
+            const silent = mode === "initial" || alreadyDelivered;
+            if (!silent) replayed += 1;
+            await pipeline.ingest(fragment, { silent });
           }
-          log(`补齐完成：本通道累计登记 ${items.length} 条转写`, "info");
+          log(
+            mode === "reconnect"
+              ? `补齐完成：断线期间补回 ${replayed} 条转写`
+              : `补齐完成：本通道累计登记 ${items.length} 条转写`,
+            "info"
+          );
         },
       })
     );

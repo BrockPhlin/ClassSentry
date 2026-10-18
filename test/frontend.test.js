@@ -39,7 +39,7 @@ function page({ html = 'index.html', scripts = ['shared.js', 'app.js'], handler,
   const radio = new Element('input'); radio.value = 'monitor';
   const state = { phase: 'idle', course: null, session: null, stats: { fragments: 0, alerts: 0 }, config: { enableDingtalk: false, keywords: ['签到'] } };
   const context = vm.createContext({
-    document: { getElementById: id => nodes.get(id), createElement: tag => new Element(tag), createTextNode: text => { const e = new Element(); e.textContent = text; return e; }, querySelector: () => radio, querySelectorAll: () => [radio] },
+    document: { addEventListener: () => {}, visibilityState: 'visible', getElementById: id => nodes.get(id), createElement: tag => new Element(tag), createTextNode: text => { const e = new Element(); e.textContent = text; return e; }, querySelector: () => radio, querySelectorAll: () => [radio] },
     // /api/state 与 /api/settings 用固定快照，其余走 handler；
     // handler 返回 httpStatus ≥ 400 时模拟 HTTP 层失败（业务层 ok:false 不受影响）
     fetch: async (url, opts) => {
@@ -47,7 +47,7 @@ function page({ html = 'index.html', scripts = ['shared.js', 'app.js'], handler,
       const status = body?.httpStatus || 200;
       return { ok: status < 400, status, json: async () => body };
     },
-    EventSource: class {}, setTimeout: () => 0, console,
+    EventSource: class { static CLOSED = 2; close() {} }, setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {}, console,
     URLSearchParams, // 页面代码拼接下载链接等查询串时会用到
     location: { href: 'http://localhost/' },
     ...extras,

@@ -26,7 +26,7 @@ export function buildConfig() {
     pollIntervalMs: Number(process.env.POLL_INTERVAL_SECONDS || 15) * 1000,
     wsStaleTimeoutMs: Number(process.env.WS_STALE_TIMEOUT_SECONDS || 300) * 1000,
     wsReconnectMaxMs: Number(process.env.WS_RECONNECT_MAX_SECONDS || 60) * 1000,
-    enableDingtalk: process.env.ENABLE_DINGTALK === "true",
+    enableDingtalk: parseBoolean(process.env.ENABLE_DINGTALK, false),
     dingtalkWebhook: process.env.DINGTALK_WEBHOOK || "",
     dingtalkSecret: process.env.DINGTALK_SECRET || "",
     llmReview: parseBoolean(process.env.LLM_REVIEW, false),

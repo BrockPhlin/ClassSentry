@@ -116,12 +116,42 @@ function updatesFromBody(body = {}) {
     updates.DEBUG_RAW = body.debugRaw ? "true" : "false";
   }
   if (body.webPort !== undefined) {
-    updates.WEB_PORT = num(body.webPort, "webPort");
+    const port = Number(body.webPort);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      throw badRequest("webPort 必须是 1–65535 的整数");
+    }
+    updates.WEB_PORT = String(port);
   }
   return updates;
 }
 
 const app = express();
+app.disable("x-powered-by");
+
+// 防 DNS rebinding / 跨站请求：只接受本机主机名的 Host，写操作若带 Origin 则必须同源。
+// （curl 等无 Origin 的本地调用不受影响；浏览器跨站 POST 一定会带 Origin。）
+const ALLOWED_HOSTNAMES = new Set(["127.0.0.1", "localhost", "[::1]", HOST.toLowerCase()]);
+function hostnameOf(hostHeader = "") {
+  const h = String(hostHeader).toLowerCase();
+  return h.startsWith("[") ? h.slice(0, h.indexOf("]") + 1) : h.split(":")[0];
+}
+app.use((req, res, next) => {
+  const deny = (message) =>
+    res.status(403).json({ error: { code: "forbidden", message } });
+  if (!ALLOWED_HOSTNAMES.has(hostnameOf(req.headers.host))) return deny("非法 Host");
+  const origin = req.headers.origin;
+  if (origin && !["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    let originHost = "";
+    try {
+      originHost = new URL(origin).host.toLowerCase();
+    } catch {
+      return deny("非法 Origin");
+    }
+    if (originHost !== String(req.headers.host || "").toLowerCase()) return deny("跨站请求被拒绝");
+  }
+  next();
+});
+
 app.use(express.json({ limit: "200kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -372,14 +402,20 @@ app.use((err, req, res, next) => {
   });
 });
 
-const server = app.listen(WEB_PORT, HOST, () => {
+const server = app.listen(WEB_PORT, HOST, (err) => {
+  // Express 5：监听失败（如端口被占用）会把错误交给回调
+  if (err) {
+    console.error(`Web 控制台启动失败：${err.message}`);
+    process.exit(1);
+  }
   console.log(`Web 控制台已启动：http://${HOST}:${WEB_PORT}`);
 });
 
+// 应用层心跳：用 data 帧而不是 ":" 注释，浏览器端才能据此检测半开连接
 setInterval(() => {
   for (const res of sseClients) {
     try {
-      res.write(": ka\n\n");
+      res.write('data: {"type":"ping"}\n\n');
     } catch {
       // 忽略
     }

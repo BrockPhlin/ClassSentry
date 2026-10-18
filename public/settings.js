@@ -23,9 +23,13 @@ function renderSetupSteps() {
 // ---------- 预警关键词 ----------
 
 // 词条预览：输入框有内容时实时反映输入；为空时展示已保存的关键词
+// 显式的「草稿模式」标志：用户开始编辑（输入或移除词条）后以输入框为准，
+// 即使删到一个词都不剩也不会回落到已保存的词（否则最后一个词删不掉、会"复活"）。
+let draftActive = false;
+
 function keywordDraft() {
-  const typed = $("kw-input").value.trim();
-  return typed ? typed.split(/[,，]/).map((word) => word.trim()).filter(Boolean) : savedKeywords;
+  if (!draftActive) return savedKeywords;
+  return $("kw-input").value.split(/[,，、]/).map((word) => word.trim()).filter(Boolean);
 }
 
 function renderKeywordPreview() {
@@ -44,6 +48,7 @@ function renderKeywordPreview() {
 
 function removeKeyword(word) {
   const words = keywordDraft().filter((w) => w !== word);
+  draftActive = true;
   $("kw-input").value = words.join("，"); // 输入框成为唯一事实来源，用户确认后再应用
   renderKeywordPreview();
 }
@@ -57,6 +62,7 @@ async function applyKeywords() {
     body: JSON.stringify({ keywords: text, keywordCooldownSeconds: cooldown }),
   });
   savedKeywords = data.settings.keywords.split(",").filter(Boolean);
+  draftActive = false;
   $("kw-input").value = "";
   renderKeywordPreview();
   toast("关键词已保存，对下一次监控任务生效", "ok");
@@ -202,7 +208,11 @@ $("btn-save-test-zhiyun").addEventListener("click", (e) => saveZhiyunAndTest(e.c
 $("btn-save-test-ding").addEventListener("click", (e) => saveDingAndTest(e.currentTarget));
 $("btn-apply-kw").addEventListener("click", () => withBusy($("btn-apply-kw"), applyKeywords, "保存中…").catch((e) => toast(e.message, "err")));
 $("btn-save-advanced").addEventListener("click", (e) => saveAdvanced(e.currentTarget));
-$("kw-input").addEventListener("input", renderKeywordPreview);
+$("kw-input").addEventListener("input", () => {
+  // 手动清空输入框 = 放弃草稿，回到已保存的词；有内容 = 进入草稿模式
+  draftActive = $("kw-input").value.trim() !== "";
+  renderKeywordPreview();
+});
 bindVisibility("btn-toggle-password", "set-password");
 bindVisibility("btn-toggle-secret", "set-ding-secret");
 

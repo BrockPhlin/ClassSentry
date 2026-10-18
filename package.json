@@ -13,7 +13,8 @@
     "start": "node server.js",
     "test": "node --test",
     "app": "electron .",
-    "app:build": "electron-builder --mac"
+    "app:build": "electron-builder --mac",
+    "app:build:win": "electron-builder --win --x64"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
@@ -50,6 +51,20 @@
       "icon": "build/icon.icns",
       "identity": null,
       "category": "public.app-category.education"
+    },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "shortcutName": "ClassSentry 课堂哨兵"
     }
   }
 }

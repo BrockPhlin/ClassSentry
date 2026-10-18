@@ -79,6 +79,7 @@ export function createPipeline(config, context = {}, sink = null, deps = {}) {
       if (!verdict.push) {
         stats.filtered += 1;
         theSink.notice(`（LLM 判定为误报，未推送：${verdict.reason}）`);
+        matcher.release(hits);
         context.onAlert?.({
           fragment,
           hits,
@@ -97,6 +98,8 @@ export function createPipeline(config, context = {}, sink = null, deps = {}) {
       hits,
       sentence: fragment.text,
     });
+    // 真发送失败（非「未启用」）归还冷却，下一句相同关键词仍可重试
+    if (!result.sent && result.reason !== "disabled") matcher.release(hits);
     context.onAlert?.({
       fragment,
       hits,

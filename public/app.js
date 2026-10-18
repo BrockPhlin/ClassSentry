@@ -75,17 +75,36 @@ function trimTranscript() {
   while (panel.children.length > 800) panel.firstChild.remove();
 }
 
+// 完整字幕记录（供复制/导出）：DOM 只保留最近 800 行，导出不能依赖 DOM
+const TRANSCRIPT_LOG_CAP = 50000;
+let transcriptLog = [];
+let interimEntry = null;
+
+function logFragment(fragment, isUpdate) {
+  if (isUpdate && interimEntry) {
+    interimEntry.time = fragment.displayTime;
+    interimEntry.text = fragment.text;
+  } else {
+    interimEntry = { time: fragment.displayTime, text: fragment.text };
+    transcriptLog.push(interimEntry);
+    if (transcriptLog.length > TRANSCRIPT_LOG_CAP) transcriptLog.shift();
+  }
+  if (fragment.final) interimEntry = null;
+}
+
 function handleFragment(fragment) {
   clearTranscriptPlaceholder();
   const panel = transcriptPanel();
 
   if (!fragment.final && interimEl) {
+    logFragment(fragment, true);
     fillLine(interimEl, fragment); // 半句原地更新
     scrollTranscript();
     return;
   }
   if (fragment.final && interimEl) {
     // 同一句话定稿：转正当前 interim 行
+    logFragment(fragment, true);
     interimEl.classList.remove("interim");
     interimEl.classList.add("final");
     fillLine(interimEl, fragment);
@@ -95,6 +114,7 @@ function handleFragment(fragment) {
     return;
   }
 
+  logFragment(fragment, false);
   const line = el("div", fragment.final ? "line final" : "line interim");
   fillLine(line, fragment);
   panel.appendChild(line);
@@ -115,6 +135,8 @@ function rebuildTranscript(entries) {
   const panel = transcriptPanel();
   panel.textContent = "";
   interimEl = null;
+  transcriptLog = [];
+  interimEntry = null;
   for (const entry of entries) { handleFragment(entry); if (entry.flushed) handleFlush(); }
   if (!entries.length) {
     const placeholder = el("div", "placeholder");
@@ -285,9 +307,7 @@ function renderLiveKeywords() {
 // ---------- 字幕导出 / 复制 ----------
 
 function transcriptLines() {
-  return [...transcriptPanel().children]
-    .filter((node) => node.className && node.className.split(" ").includes("line"))
-    .map((node) => node.textContent.trim());
+  return transcriptLog.map((entry) => `[${entry.time}]${entry.text}`.trim());
 }
 
 function exportTranscript() {

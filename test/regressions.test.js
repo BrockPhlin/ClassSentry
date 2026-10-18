@@ -6,7 +6,8 @@ import path from 'node:path';
 import { once } from 'node:events';
 import { createMonitor } from '../monitor.js';
 import { PollListener } from '../listeners/poll.js';
-import { compileKeywords } from '../matcher.js';
+import { compileKeywords, createMatcher } from '../matcher.js';
+import { createPipeline } from '../pipeline.js';
 import { toSafeSettings } from '../settings.js';
 
 const config = {
@@ -59,8 +60,8 @@ test('轮询请求不重叠；停止后丢弃尚未返回的数据', async () =>
   let fragments = 0;
   const listener = new PollListener({ fetchItems: () => { calls++; return response.promise; }, intervalMs: 1000 });
   listener.on('fragment', () => fragments++);
-  const first = listener.poll(false);
-  await listener.poll(false);
+  const first = listener.poll();
+  await listener.poll();
   assert.equal(calls, 1);
   listener.stop();
   response.resolve({ items: [{ key: 'a', text: '签到' }] });
@@ -75,6 +76,45 @@ test('场次结束后停止定时轮询', async () => {
   await ended;
   assert.equal(listener.stopped, true);
   assert.equal(listener.timer, null);
+});
+
+test('首轮轮询失败后，历史仍按基线静默，不会集中告警', async () => {
+  let call = 0;
+  const listener = new PollListener({
+    fetchItems: async () => {
+      if (++call === 1) throw new Error('network');
+      return { items: [{ key: 'old', text: '旧的签到' }] };
+    },
+    intervalMs: 100000,
+  });
+  const fragments = [];
+  listener.on('fragment', f => fragments.push(f));
+  listener.on('status', () => {});
+  await listener.poll();
+  await listener.poll();
+  assert.equal(fragments.length, 0);
+  assert.equal(listener.baselined, true);
+});
+
+test('冷却：release 后同一关键词可再次命中', () => {
+  const matcher = createMatcher({ keywords: ['签到'], cooldownMs: 120000 });
+  assert.deepEqual(matcher.feed({ text: '请签到' }), ['签到']);
+  assert.deepEqual(matcher.feed({ text: '请签到' }), []);
+  matcher.release(['签到']);
+  assert.deepEqual(matcher.feed({ text: '请签到' }), ['签到']);
+});
+
+test('钉钉推送失败时归还冷却，后续同词告警不被吞', async () => {
+  const sent = [];
+  const pipeline = createPipeline(
+    { keywords: ['签到'], keywordCooldownMs: 120000, enableDingtalk: true, dingtalkWebhook: 'http://127.0.0.1:9/x', requestTimeoutMs: 200, alertOnFinalOnly: false },
+    { onAlert: a => sent.push(a) },
+    { fragment() {}, endInterim() {}, alert() {}, notice() {} },
+  );
+  const frag = n => ({ key: `k${n}`, text: '请签到', final: true, displayTime: '00:00:00' });
+  await pipeline.ingest(frag(1));
+  await pipeline.ingest(frag(2));
+  assert.equal(sent.length, 2); // 第一次发送失败不占用冷却，第二句仍然触发
 });
 
 test('中英文逗号分隔关键词，并清除重复项', () => {

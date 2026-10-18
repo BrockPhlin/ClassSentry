@@ -10,6 +10,7 @@ export class PollListener extends EventEmitter {
     this.intervalMs = intervalMs;
     this.alertOnBaseline = alertOnBaseline;
     this.seen = new Set();
+    this.baselined = false;
     this.stopped = false;
     this.polling = false;
     this.timer = null;
@@ -21,14 +22,17 @@ export class PollListener extends EventEmitter {
   start() {
     this.stopped = false;
     // 首轮立即拉取，不等第一个 interval
-    this.poll(true).catch(() => {});
+    this.poll().catch(() => {});
     this.timer = setInterval(() => {
-      this.poll(false).catch(() => {});
+      this.poll().catch(() => {});
     }, this.intervalMs);
   }
 
-  async poll(baseline) {
+  // 基线只在「第一次成功拉取」时生效：首轮若因网络失败，下一轮仍按基线静默，
+  // 否则整段历史会被当成新句子集中告警。
+  async poll() {
     if (this.stopped || this.polling) return;
+    const baseline = !this.baselined;
     this.polling = true;
     let result;
     try {
@@ -53,6 +57,7 @@ export class PollListener extends EventEmitter {
       this.polling = false;
     }
     if (this.stopped) return;
+    this.baselined = true;
 
     const fresh = result.items.filter((frag) => !this.seen.has(frag.key));
     for (const frag of fresh) this.seen.add(frag.key);

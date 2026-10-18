@@ -138,20 +138,56 @@ function applyStateToChecks(state) {
 
 // 建立 SSE；返回连接是否存活由回调与页面自行处理。
 // onEvent(event) 收到 {type, payload}；onConnect(connected) 在连接状态变化时回调。
+// 服务端每 20s 发一次 ping；超过 SSE_STALE_MS 没有任何消息视为半开连接（锁屏/切网后常见），主动重建。
+// EventSource 进入 CLOSED（如 4xx/502）后浏览器不会再自动重试，这里也一并兜底。
+const SSE_STALE_MS = 45000;
 function openEvents(onEvent, onConnect) {
-  const es = new EventSource("/api/events");
-  es.onopen = () => onConnect?.(true);
-  es.onerror = () => onConnect?.(false);
-  es.onmessage = (msg) => {
-    let event;
-    try {
-      event = JSON.parse(msg.data);
-    } catch {
-      return;
+  let es = null;
+  let lastMsgAt = Date.now();
+  let retryTimer = null;
+
+  function connect() {
+    clearTimeout(retryTimer);
+    if (es) es.close();
+    lastMsgAt = Date.now();
+    const current = new EventSource("/api/events");
+    es = current;
+    current.onopen = () => {
+      lastMsgAt = Date.now();
+      onConnect?.(true);
+    };
+    current.onerror = () => {
+      onConnect?.(false);
+      if (current.readyState === EventSource.CLOSED) {
+        retryTimer = setTimeout(connect, 3000);
+      }
+    };
+    current.onmessage = (msg) => {
+      lastMsgAt = Date.now();
+      let event;
+      try {
+        event = JSON.parse(msg.data);
+      } catch {
+        return;
+      }
+      if (event?.type === "ping") return;
+      onEvent?.(event);
+    };
+  }
+
+  function checkStale() {
+    if (Date.now() - lastMsgAt > SSE_STALE_MS) {
+      onConnect?.(false);
+      connect();
     }
-    onEvent?.(event);
-  };
-  return es;
+  }
+  setInterval(checkStale, 10000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") checkStale();
+  });
+
+  connect();
+  return { close: () => es?.close() };
 }
 
 // ---------- 课程 / 场次（直播台与课件页共用） ----------
