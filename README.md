@@ -1,8 +1,9 @@
+
+https://github.com/user-attachments/assets/d19a8e1e-03f5-40c3-917f-e2645b32e77a
+
 # ClassSentry · 课堂哨兵
 
 智云课堂直播的「听讲哨兵」：监听平台实时语音识别，老师说到「签到 / 小测 / 扫码」等关键词时，钉钉机器人秒级推送预警，网页控制台同步滚动实时字幕。
-
-[![演示视频（点击播放，约 1 分钟）](docs/demo-cover.png)](docs/demo.mp4)
 
 ![ClassSentry 控制台](docs/screenshot.png)
 
